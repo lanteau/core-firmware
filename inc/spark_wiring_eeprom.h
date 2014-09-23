@@ -28,7 +28,7 @@
 #define __SPARK_WIRING_EEPROM_H
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32f10x.h"
+#include "stm32f4xx.h"
 
 /* Internal Flash Page size = 1KByte */
 #define PAGE_SIZE  (uint16_t)0x400

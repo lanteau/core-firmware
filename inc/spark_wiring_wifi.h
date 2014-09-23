@@ -26,7 +26,7 @@
 #ifndef __SPARK_WIRING_WIFI_H
 #define __SPARK_WIRING_WIFI_H
 
-#include "spark_wiring.h"
+#include "spark_wiring_limited.h"
 
 #define UNSEC   (WLAN_SEC_UNSEC)
 #define WEP     (WLAN_SEC_WEP)

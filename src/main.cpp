@@ -32,10 +32,10 @@
 #include "spark_utilities.h"
 extern "C" {
 #include "usb_conf.h"
-#include "usb_lib.h"
+//#include "usb_lib.h"
 #include "usb_desc.h"
-#include "usb_pwr.h"
-#include "usb_prop.h"
+//#include "usb_pwr.h"
+//#include "usb_prop.h"
 #include "sst25vf_spi.h"
 }
 
@@ -65,7 +65,7 @@ uint32_t USB_USART_BaudRate = 9600;
 static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len);
 
 /* Extern variables ----------------------------------------------------------*/
-extern LINE_CODING linecoding;
+//extern LINE_CODING linecoding;
 
 /* Private function prototypes -----------------------------------------------*/
 
@@ -80,68 +80,67 @@ extern LINE_CODING linecoding;
  *******************************************************************************/
 extern "C" void SparkCoreConfig(void)
 {
-        DECLARE_SYS_HEALTH(ENTERED_SparkCoreConfig);
+    DECLARE_SYS_HEALTH(ENTERED_SparkCoreConfig);
 #ifdef DFU_BUILD_ENABLE
-	/* Set the Vector Table(VT) base location at 0x5000 */
-	NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0x5000);
-
-	USE_SYSTEM_FLAGS = 1;
+    /* Set the Vector Table(VT) base location at 0xC000 */
+    NVIC_SetVectorTable(NVIC_VectTab_FLASH, 0xC000);
+    USE_SYSTEM_FLAGS = 1;
 #endif
 
-#ifdef SWD_JTAG_DISABLE
-	/* Disable the Serial Wire JTAG Debug Port SWJ-DP */
-	GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+// #ifdef SWD_JTAG_DISABLE
+//      Disable the Serial Wire JTAG Debug Port SWJ-DP 
+//     GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+// #endif
+
+    Set_System();
+
+    SysTick_Configuration();
+
+    /* Enable CRC clock */
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_CRC, ENABLE);
+#if !defined (RGB_NOTIFICATIONS_ON) && defined (RGB_NOTIFICATIONS_OFF)
+    LED_RGB_OVERRIDE = 1;
 #endif
 
-	Set_System();
-
-	SysTick_Configuration();
-
-	/* Enable CRC clock */
-	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_CRC, ENABLE);
-#if !defined (RGB_NOTIFICATIONS_ON)	&& defined (RGB_NOTIFICATIONS_OFF)
-	LED_RGB_OVERRIDE = 1;
-#endif
-
-	LED_SetRGBColor(RGB_COLOR_WHITE);
-	LED_On(LED_RGB);
-	SPARK_LED_FADE = 1;
+    LED_SetRGBColor(RGB_COLOR_WHITE);
+    LED_On(LED_RGB);
+    SPARK_LED_FADE = 1;
 
 #if defined (SPARK_RTC_ENABLE)
-	RTC_Configuration();
+    RTC_Configuration();
 #endif
 
 #ifdef IWDG_RESET_ENABLE
-	// ToDo this needs rework for new bootloader
-	/* Check if the system has resumed from IWDG reset */
-	if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) != RESET)
-	{
-		/* IWDGRST flag set */
-		IWDG_SYSTEM_RESET = 1;
+    // ToDo this needs rework for new bootloader
+    /* Check if the system has resumed from IWDG reset */
+    if (RCC_GetFlagStatus(RCC_FLAG_IWDGRST) != RESET)
+    {
+        /* IWDGRST flag set */
+        IWDG_SYSTEM_RESET = 1;
 
-		/* Clear reset flags */
-		RCC_ClearFlag();
-	}
+        /* Clear reset flags */
+        RCC_ClearFlag();
+    }
 
-	/* We are duplicating the IWDG call here for compatibility with old bootloader */
-	/* Set IWDG Timeout to 3 secs */
-	IWDG_Reset_Enable(3 * TIMING_IWDG_RELOAD);
+    /* We are duplicating the IWDG call here for compatibility with old bootloader */
+    /* Set IWDG Timeout to 3 secs */
+    IWDG_Reset_Enable(3 * TIMING_IWDG_RELOAD);
 #endif
 
 #ifdef DFU_BUILD_ENABLE
-	Load_SystemFlags();
+    Load_SystemFlags();
 #endif
 
 #ifdef SPARK_SFLASH_ENABLE
-	sFLASH_Init();
+    sFLASH_Init();
 #endif
 
 #ifdef SPARK_WLAN_ENABLE
-	/* Start Spark Wlan and connect to Wifi Router by default */
-	SPARK_WLAN_SETUP = 1;
+    /* Start Spark Wlan and connect to Wifi Router by default */
+    SPARK_WLAN_SETUP = 1;
 
-	/* Connect to Spark Cloud by default */
-	SPARK_CLOUD_CONNECT = 1;
+    /* Connect to Spark Cloud by default */
+    SPARK_CLOUD_CONNECT = 1;
 #endif
 }
 
@@ -154,57 +153,57 @@ extern "C" void SparkCoreConfig(void)
  *******************************************************************************/
 int main(void)
 {
-  // We have running firmware, otherwise we wouldn't have gotten here
-  DECLARE_SYS_HEALTH(ENTERED_Main);
-  DEBUG("Hello from Spark!");
+    // We have running firmware, otherwise we wouldn't have gotten here
+    DECLARE_SYS_HEALTH(ENTERED_Main);
+    DEBUG("Hello from Spark!");
 
 #ifdef SPARK_WLAN_ENABLE
-  if (SPARK_WLAN_SETUP)
-  {
-    SPARK_WLAN_Setup(Multicast_Presence_Announcement);
-  }
-#endif
-
-  /* Main loop */
-  while (1)
-  {
-#ifdef SPARK_WLAN_ENABLE
-    if(SPARK_WLAN_SETUP)
+    if (SPARK_WLAN_SETUP)
     {
-      DECLARE_SYS_HEALTH(ENTERED_WLAN_Loop);
-      SPARK_WLAN_Loop();
+        SPARK_WLAN_Setup(Multicast_Presence_Announcement);
     }
 #endif
 
-#ifdef SPARK_WIRING_ENABLE
-		static uint8_t SPARK_WIRING_APPLICATION = 0;
+    /* Main loop */
+    while (1)
+    {
 #ifdef SPARK_WLAN_ENABLE
-		if(!SPARK_WLAN_SETUP || SPARK_WLAN_SLEEP || !SPARK_CLOUD_CONNECT || SPARK_CLOUD_CONNECTED || SPARK_WIRING_APPLICATION)
-		{
-			if(!SPARK_FLASH_UPDATE && !IWDG_SYSTEM_RESET)
-			{
+        if(SPARK_WLAN_SETUP)
+        {
+            DECLARE_SYS_HEALTH(ENTERED_WLAN_Loop);
+            SPARK_WLAN_Loop();
+        }
 #endif
-				if((SPARK_WIRING_APPLICATION != 1) && (NULL != setup))
-				{
-					//Execute user application setup only once
-				        DECLARE_SYS_HEALTH(ENTERED_Setup);
-					setup();
-					SPARK_WIRING_APPLICATION = 1;
-				}
 
-				if(NULL != loop)
-				{
-					//Execute user application loop
-			                DECLARE_SYS_HEALTH(ENTERED_Loop);
-					loop();
-                                        DECLARE_SYS_HEALTH(RAN_Loop);
-				}
+#ifdef SPARK_WIRING_ENABLE
+        static uint8_t SPARK_WIRING_APPLICATION = 0;
 #ifdef SPARK_WLAN_ENABLE
-			}
-		}
+        if(!SPARK_WLAN_SETUP || SPARK_WLAN_SLEEP || !SPARK_CLOUD_CONNECT || SPARK_CLOUD_CONNECTED || SPARK_WIRING_APPLICATION)
+        {
+            if(!SPARK_FLASH_UPDATE && !IWDG_SYSTEM_RESET)
+            {
+#endif
+                if((SPARK_WIRING_APPLICATION != 1) && (NULL != setup))
+                {
+                    //Execute user application setup only once
+                    DECLARE_SYS_HEALTH(ENTERED_Setup);
+                    setup();
+                    SPARK_WIRING_APPLICATION = 1;
+                }
+
+                if(NULL != loop)
+                {
+                    //Execute user application loop
+                    DECLARE_SYS_HEALTH(ENTERED_Loop);
+                    loop();
+                    DECLARE_SYS_HEALTH(RAN_Loop);
+                }
+#ifdef SPARK_WLAN_ENABLE
+            }
+        }
 #endif
 #endif
-	}
+    }
 }
 
 /*******************************************************************************
@@ -216,108 +215,166 @@ int main(void)
  *******************************************************************************/
 void Timing_Decrement(void)
 {
-	if (TimingDelay != 0x00)
-	{
-		TimingDelay--;
-	}
+    if (TimingDelay != 0x00)
+    {
+        TimingDelay--;
+    }
 
-#if !defined (RGB_NOTIFICATIONS_ON)	&& defined (RGB_NOTIFICATIONS_OFF)
-	//Just needed in case LED_RGB_OVERRIDE is set to 0 by accident
-	if (LED_RGB_OVERRIDE == 0)
-	{
-		LED_RGB_OVERRIDE = 1;
-		LED_Off(LED_RGB);
-	}
+#if !defined (RGB_NOTIFICATIONS_ON) && defined (RGB_NOTIFICATIONS_OFF)
+    //Just needed in case LED_RGB_OVERRIDE is set to 0 by accident
+    if (LED_RGB_OVERRIDE == 0)
+    {
+        LED_RGB_OVERRIDE = 1;
+        LED_Off(LED_RGB);
+    }
 #endif
 
-	if (LED_RGB_OVERRIDE != 0)
-	{
-		if ((LED_Spark_Signal != 0) && (NULL != LED_Signaling_Override))
-		{
-			LED_Signaling_Override();
-		}
-	}
-	else if (TimingLED != 0x00)
-	{
-		TimingLED--;
-	}
-	else if(WLAN_SMART_CONFIG_START || SPARK_FLASH_UPDATE || Spark_Error_Count)
-	{
-		//Do nothing
-	}
-	else if(SPARK_LED_FADE)
-	{
-		LED_Fade(LED_RGB);
-		TimingLED = 20;//Breathing frequency kept constant
-	}
-	else if(SPARK_WLAN_SETUP && SPARK_CLOUD_CONNECTED)
-	{
+    if (LED_RGB_OVERRIDE != 0)
+    {
+        if ((LED_Spark_Signal != 0) && (NULL != LED_Signaling_Override))
+        {
+            LED_Signaling_Override();
+        }
+    }
+    if (TimingLED != 0x00)
+    {
+        TimingLED--;
+    }
+    else if(WLAN_SMART_CONFIG_START || SPARK_FLASH_UPDATE || Spark_Error_Count)
+    {
+        //Do nothing
+    }
+    else if(SPARK_LED_FADE)
+    {
+        LED_Fade(LED_RGB);
+        TimingLED = 20;//Breathing frequency kept constant
+    }
+    else if(SPARK_WLAN_SETUP && SPARK_CLOUD_CONNECTED)
+    {
 #if defined (RGB_NOTIFICATIONS_CONNECTING_ONLY)
-		LED_Off(LED_RGB);
+        LED_Off(LED_RGB);
 #else
-		LED_SetRGBColor(RGB_COLOR_CYAN);
-		LED_On(LED_RGB);
-		SPARK_LED_FADE = 1;
+        LED_SetRGBColor(RGB_COLOR_CYAN);
+        LED_On(LED_RGB);
+        SPARK_LED_FADE = 1;
 #endif
-	}
-	else
-	{
-		LED_Toggle(LED_RGB);
-		if(SPARK_CLOUD_SOCKETED)
-			TimingLED = 50;		//50ms
-		else
-			TimingLED = 100;	//100ms
-	}
+    }
+    else
+    {
+        LED_Toggle(LED_RGB);
+        if(SPARK_CLOUD_SOCKETED)
+            TimingLED = 50;     //50ms
+        else
+            TimingLED = 100;    //100ms
+    }
 
 #ifdef SPARK_WLAN_ENABLE
-	if(!SPARK_WLAN_SETUP || SPARK_WLAN_SLEEP)
-	{
-		//Do nothing
-	}
-	else if(SPARK_FLASH_UPDATE)
-	{
-		if (TimingFlashUpdateTimeout >= TIMING_FLASH_UPDATE_TIMEOUT)
-		{
-			//Reset is the only way now to recover from stuck OTA update
-			NVIC_SystemReset();
-		}
-		else
-		{
-			TimingFlashUpdateTimeout++;
-		}
-	}
-	else if(!WLAN_SMART_CONFIG_START && BUTTON_GetDebouncedTime(BUTTON1) >= 3000)
-	{
-		BUTTON_ResetDebouncedState(BUTTON1);
+    if(!SPARK_WLAN_SETUP || SPARK_WLAN_SLEEP)
+    {
+        //Do nothing
+    }
+    else if(SPARK_FLASH_UPDATE)
+    {
+        if (TimingFlashUpdateTimeout >= TIMING_FLASH_UPDATE_TIMEOUT)
+        {
+            //Reset is the only way now to recover from stuck OTA update
+            NVIC_SystemReset();
+        }
+        else
+        {
+            TimingFlashUpdateTimeout++;
+        }
+    }
+    else if(!WLAN_SMART_CONFIG_START && BUTTON_GetDebouncedTime(BUTTON1) >= 3000)
+    {
+        BUTTON_ResetDebouncedState(BUTTON1);
 
-		if(!SPARK_WLAN_SLEEP)
-		{
-			WiFi.listen();
-		}
-	}
-	else if(BUTTON_GetDebouncedTime(BUTTON1) >= 7000)
-	{
-		BUTTON_ResetDebouncedState(BUTTON1);
+        if(!SPARK_WLAN_SLEEP)
+        {
+            WiFi.listen();
+        }
+    }
+    else if(BUTTON_GetDebouncedTime(BUTTON1) >= 7000)
+    {
+        BUTTON_ResetDebouncedState(BUTTON1);
 
-		WLAN_DELETE_PROFILES = 1;
-	}
+        WLAN_DELETE_PROFILES = 1;
+    }
 #endif
 
 #ifdef IWDG_RESET_ENABLE
-	if (TimingIWDGReload >= TIMING_IWDG_RELOAD)
-	{
-		TimingIWDGReload = 0;
+    if (TimingIWDGReload >= TIMING_IWDG_RELOAD)
+    {
+        TimingIWDGReload = 0;
 
-		/* Reload WDG counter */
-		KICK_WDT();
-		DECLARE_SYS_HEALTH(0xFFFF);
-	}
-	else
-	{
-		TimingIWDGReload++;
-	}
+        /* Reload WDG counter */
+        KICK_WDT();
+        DECLARE_SYS_HEALTH(0xFFFF);
+    }
+    else
+    {
+        TimingIWDGReload++;
+    }
 #endif
 }
+
+void USART3Put(uint8_t ch)
+{
+    while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET);
+    USART_SendData(USART3, (uint8_t) ch);
+    //Loop until the end of transmission
+    while(USART_GetFlagStatus(USART3, USART_FLAG_TC) == RESET)
+    {
+    }
+}
+
+void USART3_Init(uint32_t baudrate)
+{
+    GPIO_InitTypeDef GPIO_InitStruct; // this is for the GPIO pins used as TX and RX
+    USART_InitTypeDef USART_InitStruct; // this is for the USART1 initilization
+    //NVIC_InitTypeDef NVIC_InitStructure; // this is used to configure the NVIC (nested vector interrupt controller)
+
+    RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3, ENABLE);
+    RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOD, ENABLE);
+
+    /* This sequence sets up the TX and RX pins
+     * so they work correctly with the USART1 peripheral
+     */
+    GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8 | GPIO_Pin_9; // Pins 8 (TX) and 9 (RX) are used
+    GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF;
+    GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+    GPIO_InitStruct.GPIO_OType = GPIO_OType_PP;
+    GPIO_InitStruct.GPIO_PuPd = GPIO_PuPd_UP;
+    GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    GPIO_PinAFConfig(GPIOD, GPIO_PinSource8, GPIO_AF_USART3); //
+    GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_USART3);
+
+    USART_InitStruct.USART_BaudRate = baudrate;             // the baudrate is set to the value we passed into this init function
+    USART_InitStruct.USART_WordLength = USART_WordLength_8b;// we want the data frame size to be 8 bits (standard)
+    USART_InitStruct.USART_StopBits = USART_StopBits_1;     // we want 1 stop bit (standard)
+    USART_InitStruct.USART_Parity = USART_Parity_No;        // we don't want a parity bit (standard)
+    USART_InitStruct.USART_HardwareFlowControl = USART_HardwareFlowControl_None; // we don't want flow control (standard)
+    USART_InitStruct.USART_Mode = USART_Mode_Tx; //| USART_Mode_Rx; // we want to enable the transmitter and the receiver
+    USART_Init(USART3, &USART_InitStruct);                  // again all the properties are passed to the USART_Init function which takes care of all the bit setting
+
+
+    /* Here the USART3 receive interrupt is enabled
+     * and the interrupt controller is configured
+     * to jump to the USART3_IRQHandler() function
+     * if the USART3 receive interrupt occurs
+     */
+    // USART_ITConfig(USART3, USART_IT_RXNE, ENABLE); // enable the USART1 receive interrupt
+
+    // NVIC_InitStructure.NVIC_IRQChannel = USART3_IRQn;
+    // NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+    // NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+    // NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+    // NVIC_Init(&NVIC_InitStructure);
+
+    USART_Cmd(USART3, ENABLE);
+}
+
 
 /*******************************************************************************
  * Function Name  : USB_USART_Init
@@ -325,16 +382,16 @@ void Timing_Decrement(void)
  * Input          : baudRate.
  * Return         : None.
  *******************************************************************************/
-void USB_USART_Init(uint32_t baudRate)
-{
-	linecoding.bitrate = baudRate;
-	USB_Disconnect_Config();
-	USB_Cable_Config(DISABLE);
-	Delay_Microsecond(100000);
-	Set_USBClock();
-	USB_Interrupts_Config();
-	USB_Init();
-}
+// void USB_USART_Init(uint32_t baudRate)
+// {
+//     linecoding.bitrate = baudRate;
+//     USB_Disconnect_Config();
+//     USB_Cable_Config(DISABLE);
+//     Delay_Microsecond(100000);
+//     Set_USBClock();
+//     USB_Interrupts_Config();
+//     USB_Init();
+// }
 
 /*******************************************************************************
  * Function Name  : USB_USART_Available_Data.
@@ -342,18 +399,18 @@ void USB_USART_Init(uint32_t baudRate)
  * Input          : None.
  * Return         : Length.
  *******************************************************************************/
-uint8_t USB_USART_Available_Data(void)
-{
-	if(bDeviceState == CONFIGURED)
-	{
-		if(USB_Rx_State == 1)
-		{
-			return (USB_Rx_length - USB_Rx_ptr);
-		}
-	}
+// uint8_t USB_USART_Available_Data(void)
+// {
+//     if(bDeviceState == CONFIGURED)
+//     {
+//         if(USB_Rx_State == 1)
+//         {
+//             return (USB_Rx_length - USB_Rx_ptr);
+//         }
+//     }
 
-	return 0;
-}
+//     return 0;
+// }
 
 /*******************************************************************************
  * Function Name  : USB_USART_Receive_Data.
@@ -361,26 +418,26 @@ uint8_t USB_USART_Available_Data(void)
  * Input          : None
  * Return         : Data.
  *******************************************************************************/
-int32_t USB_USART_Receive_Data(void)
-{
-	if(bDeviceState == CONFIGURED)
-	{
-		if(USB_Rx_State == 1)
-		{
-			if((USB_Rx_length - USB_Rx_ptr) == 1)
-			{
-				USB_Rx_State = 0;
+// int32_t USB_USART_Receive_Data(void)
+// {
+//     if(bDeviceState == CONFIGURED)
+//     {
+//         if(USB_Rx_State == 1)
+//         {
+//             if((USB_Rx_length - USB_Rx_ptr) == 1)
+//             {
+//                 USB_Rx_State = 0;
 
-				/* Enable the receive of data on EP3 */
-				SetEPRxValid(ENDP3);
-			}
+//                 /* Enable the receive of data on EP3 */
+//                 SetEPRxValid(ENDP3);
+//             }
 
-			return USB_Rx_Buffer[USB_Rx_ptr++];
-		}
-	}
+//             return USB_Rx_Buffer[USB_Rx_ptr++];
+//         }
+//     }
 
-	return -1;
-}
+//     return -1;
+// }
 
 /*******************************************************************************
  * Function Name  : USB_USART_Send_Data.
@@ -388,27 +445,27 @@ int32_t USB_USART_Receive_Data(void)
  * Input          : Data.
  * Return         : None.
  *******************************************************************************/
-void USB_USART_Send_Data(uint8_t Data)
-{
-	if(bDeviceState == CONFIGURED)
-	{
-		USART_Rx_Buffer[USART_Rx_ptr_in] = Data;
+// void USB_USART_Send_Data(uint8_t Data)
+// {
+//     if(bDeviceState == CONFIGURED)
+//     {
+//         USART_Rx_Buffer[USART_Rx_ptr_in] = Data;
 
-		USART_Rx_ptr_in++;
+//         USART_Rx_ptr_in++;
 
-		/* To avoid buffer overflow */
-		if(USART_Rx_ptr_in == USART_RX_DATA_SIZE)
-		{
-			USART_Rx_ptr_in = 0;
-		}
+//         /* To avoid buffer overflow */
+//         if(USART_Rx_ptr_in == USART_RX_DATA_SIZE)
+//         {
+//             USART_Rx_ptr_in = 0;
+//         }
 
-		if(CC3000_Read_Interrupt_Pin())
-		{
-			//Delay 100us to avoid losing the data
-			Delay_Microsecond(100);
-		}
-	}
-}
+//         if(CC3000_Read_Interrupt_Pin())
+//         {
+//             //Delay 100us to avoid losing the data
+//             Delay_Microsecond(100);
+//         }
+//     }
+// }
 
 /*******************************************************************************
  * Function Name  : Handle_USBAsynchXfer.
@@ -416,57 +473,57 @@ void USB_USART_Send_Data(uint8_t Data)
  * Input          : None.
  * Return         : None.
  *******************************************************************************/
-void Handle_USBAsynchXfer (void)
-{
+// void Handle_USBAsynchXfer (void)
+// {
 
-	uint16_t USB_Tx_ptr;
-	uint16_t USB_Tx_length;
+//     uint16_t USB_Tx_ptr;
+//     uint16_t USB_Tx_length;
 
-	if(USB_Tx_State != 1)
-	{
-		if (USART_Rx_ptr_out == USART_RX_DATA_SIZE)
-		{
-			USART_Rx_ptr_out = 0;
-		}
+//     if(USB_Tx_State != 1)
+//     {
+//         if (USART_Rx_ptr_out == USART_RX_DATA_SIZE)
+//         {
+//             USART_Rx_ptr_out = 0;
+//         }
 
-		if(USART_Rx_ptr_out == USART_Rx_ptr_in)
-		{
-			USB_Tx_State = 0;
-			return;
-		}
+//         if(USART_Rx_ptr_out == USART_Rx_ptr_in)
+//         {
+//             USB_Tx_State = 0;
+//             return;
+//         }
 
-		if(USART_Rx_ptr_out > USART_Rx_ptr_in) /* rollback */
-		{
-			USART_Rx_length = USART_RX_DATA_SIZE - USART_Rx_ptr_out;
-		}
-		else
-		{
-			USART_Rx_length = USART_Rx_ptr_in - USART_Rx_ptr_out;
-		}
+//         if(USART_Rx_ptr_out > USART_Rx_ptr_in) /* rollback */
+//         {
+//             USART_Rx_length = USART_RX_DATA_SIZE - USART_Rx_ptr_out;
+//         }
+//         else
+//         {
+//             USART_Rx_length = USART_Rx_ptr_in - USART_Rx_ptr_out;
+//         }
 
-		if (USART_Rx_length > VIRTUAL_COM_PORT_DATA_SIZE)
-		{
-			USB_Tx_ptr = USART_Rx_ptr_out;
-			USB_Tx_length = VIRTUAL_COM_PORT_DATA_SIZE;
+//         if (USART_Rx_length > VIRTUAL_COM_PORT_DATA_SIZE)
+//         {
+//             USB_Tx_ptr = USART_Rx_ptr_out;
+//             USB_Tx_length = VIRTUAL_COM_PORT_DATA_SIZE;
 
-			USART_Rx_ptr_out += VIRTUAL_COM_PORT_DATA_SIZE;
-			USART_Rx_length -= VIRTUAL_COM_PORT_DATA_SIZE;
-		}
-		else
-		{
-			USB_Tx_ptr = USART_Rx_ptr_out;
-			USB_Tx_length = USART_Rx_length;
+//             USART_Rx_ptr_out += VIRTUAL_COM_PORT_DATA_SIZE;
+//             USART_Rx_length -= VIRTUAL_COM_PORT_DATA_SIZE;
+//         }
+//         else
+//         {
+//             USB_Tx_ptr = USART_Rx_ptr_out;
+//             USB_Tx_length = USART_Rx_length;
 
-			USART_Rx_ptr_out += USART_Rx_length;
-			USART_Rx_length = 0;
-		}
-		USB_Tx_State = 1;
-		UserToPMABufferCopy(&USART_Rx_Buffer[USB_Tx_ptr], ENDP1_TXADDR, USB_Tx_length);
-		SetEPTxCount(ENDP1, USB_Tx_length);
-		SetEPTxValid(ENDP1);
-	}
+//             USART_Rx_ptr_out += USART_Rx_length;
+//             USART_Rx_length = 0;
+//         }
+//         USB_Tx_State = 1;
+//         UserToPMABufferCopy(&USART_Rx_Buffer[USB_Tx_ptr], ENDP1_TXADDR, USB_Tx_length);
+//         SetEPTxCount(ENDP1, USB_Tx_length);
+//         SetEPTxValid(ENDP1);
+//     }
 
-}
+// }
 
 /*******************************************************************************
  * Function Name  : Get_SerialNum.
@@ -477,19 +534,19 @@ void Handle_USBAsynchXfer (void)
  *******************************************************************************/
 void Get_SerialNum(void)
 {
-	uint32_t Device_Serial0, Device_Serial1, Device_Serial2;
+    uint32_t Device_Serial0, Device_Serial1, Device_Serial2;
 
-	Device_Serial0 = *(uint32_t*)ID1;
-	Device_Serial1 = *(uint32_t*)ID2;
-	Device_Serial2 = *(uint32_t*)ID3;
+    Device_Serial0 = *(uint32_t*)ID1;
+    Device_Serial1 = *(uint32_t*)ID2;
+    Device_Serial2 = *(uint32_t*)ID3;
 
-	Device_Serial0 += Device_Serial2;
+    Device_Serial0 += Device_Serial2;
 
-	if (Device_Serial0 != 0)
-	{
-		IntToUnicode (Device_Serial0, &Virtual_Com_Port_StringSerial[2] , 8);
-		IntToUnicode (Device_Serial1, &Virtual_Com_Port_StringSerial[18], 4);
-	}
+    if (Device_Serial0 != 0)
+    {
+        IntToUnicode (Device_Serial0, &Virtual_Com_Port_StringSerial[2] , 8);
+        IntToUnicode (Device_Serial1, &Virtual_Com_Port_StringSerial[18], 4);
+    }
 }
 
 /*******************************************************************************
@@ -501,23 +558,23 @@ void Get_SerialNum(void)
  *******************************************************************************/
 static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len)
 {
-	uint8_t idx = 0;
+    uint8_t idx = 0;
 
-	for( idx = 0 ; idx < len ; idx ++)
-	{
-		if( ((value >> 28)) < 0xA )
-		{
-			pbuf[ 2* idx] = (value >> 28) + '0';
-		}
-		else
-		{
-			pbuf[2* idx] = (value >> 28) + 'A' - 10;
-		}
+    for( idx = 0 ; idx < len ; idx ++)
+    {
+        if( ((value >> 28)) < 0xA )
+        {
+            pbuf[ 2* idx] = (value >> 28) + '0';
+        }
+        else
+        {
+            pbuf[2* idx] = (value >> 28) + 'A' - 10;
+        }
 
-		value = value << 4;
+        value = value << 4;
 
-		pbuf[ 2* idx + 1] = 0;
-	}
+        pbuf[ 2* idx + 1] = 0;
+    }
 }
 
 #ifdef USE_FULL_ASSERT
@@ -532,12 +589,12 @@ static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len)
  *******************************************************************************/
 void assert_failed(uint8_t* file, uint32_t line)
 {
-	/* User can add his own implementation to report the file name and line number,
-	 ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+    /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
 
-	/* Infinite loop */
-	while (1)
-	{
-	}
+    /* Infinite loop */
+    while (1)
+    {
+    }
 }
 #endif

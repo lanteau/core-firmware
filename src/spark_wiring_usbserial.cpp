@@ -25,6 +25,7 @@
  */
 
 #include "spark_wiring_usbserial.h"
+#include "usbd_cdc_vcp.h"
 
 //
 // Constructor
@@ -39,7 +40,7 @@ USBSerial::USBSerial()
 
 void USBSerial::begin(long speed)
 {
-	USB_USART_Init(speed);
+	//USB_USART_Init(speed);
 }
 
 void USBSerial::end()
@@ -51,17 +52,24 @@ void USBSerial::end()
 // Read data from buffer
 int USBSerial::read()
 {
-	return USB_USART_Receive_Data();
+	//return USB_USART_Receive_Data();
+
+  uint8_t byte;
+  // VCP_get_char((uint8_t*)&byte);
+  return byte;
 }
 
 int USBSerial::available()
 {
-	return USB_USART_Available_Data();
+  //TODO
+	//return USB_USART_Available_Data();
+  return 0;
 }
 
 size_t USBSerial::write(uint8_t byte)
 {
-	USB_USART_Send_Data(byte);
+	//USB_USART_Send_Data(byte);
+  // VCP_put_char(byte);
 
 	return 1;
 }

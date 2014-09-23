@@ -49,21 +49,25 @@ LIB_CORE_LIBRARIES_PATH = libraries/
 
 # Include directoris for optional "libraries" (eg. Serial2.h)
 INCLUDE_DIRS += $(LIB_CORE_LIBRARIES_PATH)/Serial2
+INCLUDE_DIRS += $(LIB_CORE_LIBRARIES_PATH)/USB_OTG/inc
+INCLUDE_DIRS += $(LIB_CORE_LIBRARIES_PATH)/USB_Device/Core/inc
+INCLUDE_DIRS += $(LIB_CORE_LIBRARIES_PATH)/USB_Device/Class/cdc/inc
+INCLUDE_DIRS += $(LIB_CORE_LIBRARIES_PATH)/Conf
+
 
 # Additional include directories, applied to objects built for this target.
 INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/CMSIS/Include
-INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/CMSIS/Device/ST/STM32F10x/Include
-INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/STM32F10x_StdPeriph_Driver/inc
-INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/STM32_USB-FS-Device_Driver/inc
+INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/CMSIS/Device/ST/STM32F4xx/Include
+INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/STM32F4xx_StdPeriph_Driver/inc
 INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/CC3000_Host_Driver
 INCLUDE_DIRS += $(LIB_CORE_COMMON_PATH)/SPARK_Firmware_Driver/inc
 INCLUDE_DIRS += $(LIB_CORE_COMMUNICATION_PATH)/lib/tropicssl/include
 INCLUDE_DIRS += $(LIB_CORE_COMMUNICATION_PATH)/src
 
 # Compiler flags
-CFLAGS =  -g3 -gdwarf-2 -Os -mcpu=cortex-m3 -mthumb 
+CFLAGS =  -ggdb3 -gdwarf-2 -O0 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16
 CFLAGS += $(patsubst %,-I$(SRC_PATH)/%,$(INCLUDE_DIRS)) -I.
-CFLAGS += -ffunction-sections -Wall -fmessage-length=0
+CFLAGS += -ffunction-sections -fdata-sections -fno-builtin -Wall -fmessage-length=0 -Wfatal-errors
 
 # Flag compiler error for [-Wdeprecated-declarations]
 CFLAGS += -Werror=deprecated-declarations
@@ -73,9 +77,13 @@ CFLAGS += -MD -MP -MF $@.d
 
 # Target specific defines
 CFLAGS += -DUSE_STDPERIPH_DRIVER
-CFLAGS += -DSTM32F10X_MD
+CFLAGS += -DSTM32F4XX
+CFLAGS += -DSTM32F40_41xxx
 CFLAGS += -DDFU_BUILD_ENABLE
 CFLAGS += -DSPARK=1
+CFLAGS += -DSTDOUT_USART=3
+CFLAGS += -DSTDERR_USART=3
+CFLAGS += -DSTDIN_USART=3
 
 ifeq ("$(USE_SWD_JTAG)","y") 
 CFLAGS += -DUSE_SWD_JTAG
@@ -91,7 +99,7 @@ endif
 CPPFLAGS = -fno-exceptions -fno-rtti 
 
 # Linker flags
-LDFLAGS += -T../linker/linker_stm32f10x_md_dfu.ld -nostartfiles -Xlinker --gc-sections 
+LDFLAGS += -T../linker/linker_stm32f4xx_dfu.ld -nostartfiles -Xlinker --gc-sections 
 LDFLAGS += -L$(SRC_PATH)/$(LIB_CORE_COMMON_PATH)/build -lcore-common-lib
 LDFLAGS += -L$(SRC_PATH)/$(LIB_CORE_COMMUNICATION_PATH)/build -lcore-communication-lib
 LDFLAGS += -Wl,-Map,$(TARGET).map
@@ -99,7 +107,7 @@ LDFLAGS += --specs=nano.specs -lc -lnosys
 LDFLAGS += -u _printf_float
 
 # Assember flags
-ASFLAGS =  -g3 -gdwarf-2 -mcpu=cortex-m3 -mthumb 
+ASFLAGS =  -g3 -gdwarf-2 -mcpu=cortex-m4 -mthumb
 ASFLAGS += -x assembler-with-cpp -fmessage-length=0
 
 # Collect all object and dep files

@@ -27,7 +27,8 @@
 #ifndef __SPARK_WIRING_IPADDRESS_H
 #define __SPARK_WIRING_IPADDRESS_H
 
-#include "spark_wiring.h"
+//#include "spark_wiring.h"
+#include "spark_wiring_limited.h"
 
 class IPAddress : public Printable {
 private:

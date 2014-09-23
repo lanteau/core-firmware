@@ -69,7 +69,7 @@ extern "C" {
  * Use Independent Watchdog to force a system reset when a software error occurs
  * During JTAG program/debug, the Watchdog counting is disabled by debug configuration
  */
-#define IWDG_RESET_ENABLE
+//#define IWDG_RESET_ENABLE
 
 //#undef SPARK_WLAN_ENABLE
 
@@ -93,6 +93,8 @@ extern "C" {
 /* Exported functions ------------------------------------------------------- */
 void Timing_Decrement(void);
 
+void USART3_Init(uint32_t baudrate);
+void USART3Put(uint8_t ch);
 void USB_USART_Init(uint32_t baudRate);
 uint8_t USB_USART_Available_Data(void);
 int32_t USB_USART_Receive_Data(void);

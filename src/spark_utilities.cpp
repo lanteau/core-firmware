@@ -25,7 +25,8 @@
   ******************************************************************************
  */
 #include "spark_utilities.h"
-#include "spark_wiring.h"
+//#include "spark_wiring.h"
+#include "spark_wiring_limited.h"
 #include "socket.h"
 #include "netapp.h"
 #include "string.h"
@@ -139,7 +140,7 @@ void SystemClass::bootloader(void)
   //Work in Progress
   //The drawback here being it will enter bootloader mode until firmware
   //is loaded again. Require bootloader changes for proper working.
-  BKP_WriteBackupRegister(BKP_DR10, 0xFFFF);
+  RTC_WriteBackupRegister(RTC_BKP_DR10, 0xFFFF);
   FLASH_OTA_Update_SysFlag = 0xFFFF;
   Save_SystemFlags();
 
@@ -335,11 +336,10 @@ void SparkClass::syncTime(void)
 void SparkClass::sleep(Spark_Sleep_TypeDef sleepMode, long seconds)
 {
 #if defined (SPARK_RTC_ENABLE)
-	/* Set the RTC Alarm */
-	RTC_SetAlarm(RTC_GetCounter() + (uint32_t)seconds);
 
-	/* Wait until last write operation on RTC registers has finished */
-	RTC_WaitForLastTask();
+  /* Set the RTC Wakeup */
+  RTC_SetWakeUpCounter(seconds);
+  RTC_ITConfig(RTC_IT_WUT, ENABLE);
 
 	switch(sleepMode)
 	{
@@ -390,7 +390,7 @@ bool SparkClass::connected(void)
 void SparkClass::connect(void)
 {
 	//Schedule Spark's cloud connection and handshake
-        WiFi.connect();
+  WiFi.connect();
 	SPARK_CLOUD_CONNECT = 1;
 }
 

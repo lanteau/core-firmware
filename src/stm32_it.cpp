@@ -30,8 +30,12 @@
 #include "debug.h"
 #include "stm32_it.h"
 #include "main.h"
-#include "usb_lib.h"
-#include "usb_istr.h"
+//#include "usb_lib.h"
+//#include "usb_istr.h"
+#include "usb_core.h"
+#include "usbd_core.h"
+#include "usbd_cdc_core.h"
+#include <stdio.h>
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -43,6 +47,8 @@
 
 /* Extern variables ----------------------------------------------------------*/
 extern __IO uint16_t BUTTON_DEBOUNCED_TIME[];
+//extern uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev);
+//extern USB_OTG_CORE_HANDLE USB_OTG_dev;
 
 /* Private function prototypes -----------------------------------------------*/
 void Wiring_ADC1_2_Interrupt_Handler(void) __attribute__ ((weak));
@@ -85,7 +91,7 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
 	/* Go to infinite loop when Hard Fault exception occurs */
-        PANIC(HardFault,"HardFault");
+    PANIC(HardFault,"HardFault");
 	while (1)
 	{
 	}
@@ -568,20 +574,41 @@ void TIM4_IRQHandler(void)
  * Output         : None
  * Return         : None
  *******************************************************************************/
-void RTC_IRQHandler(void)
+// void RTC_IRQHandler(void)
+// {
+// 	if(RTC_GetITStatus(RTC_IT_SEC) != RESET)
+// 	{
+// 		/* Clear the RTC Second Interrupt pending bit */
+// 		RTC_ClearITPendingBit(RTC_IT_SEC);
+
+// 		if(NULL != Wiring_RTC_Interrupt_Handler)
+// 		{
+// 			Wiring_RTC_Interrupt_Handler();
+// 		}
+
+// 		/* Wait until last write operation on RTC registers has finished */
+// 		RTC_WaitForLastTask();
+// 	}
+// }
+
+/*******************************************************************************
+ * Function Name  : RTC_WKUP_IRQHandler
+ * Description    : This function handles RTC WKUP interrupt request.
+ * Input          : None
+ * Output         : None
+ * Return         : None
+ *******************************************************************************/
+void RTC_WKUP_IRQHandler(void)
 {
-	if(RTC_GetITStatus(RTC_IT_SEC) != RESET)
+	if(RTC_GetITStatus(RTC_IT_WUT) != RESET)
 	{
-		/* Clear the RTC Second Interrupt pending bit */
-		RTC_ClearITPendingBit(RTC_IT_SEC);
+  	/* TODO: Not sure if we need to do more stuff on wakeup or not */
 
-		if(NULL != Wiring_RTC_Interrupt_Handler)
-		{
-			Wiring_RTC_Interrupt_Handler();
-		}
+	/* Wake up from Spark.sleep mode(SLEEP_MODE_WLAN) */
+	SPARK_WLAN_SLEEP = 0;
 
-		/* Wait until last write operation on RTC registers has finished */
-		RTC_WaitForLastTask();
+	RTC_ClearITPendingBit(RTC_IT_WUT);
+	EXTI_ClearITPendingBit(EXTI_Line22);
 	}
 }
 
@@ -594,40 +621,40 @@ void RTC_IRQHandler(void)
 *******************************************************************************/
 void RTCAlarm_IRQHandler(void)
 {
-	if(RTC_GetITStatus(RTC_IT_ALR) != RESET)
-	{
-	        /* Wake up from Spark.sleep mode(SLEEP_MODE_WLAN) */
-		SPARK_WLAN_SLEEP = 0;
+	// if(RTC_GetITStatus(RTC_IT_ALR) != RESET)
+	// {
+	//         /* Wake up from Spark.sleep mode(SLEEP_MODE_WLAN) */
+	// 	SPARK_WLAN_SLEEP = 0;
 
-		/* Clear EXTI line17 pending bit */
-		EXTI_ClearITPendingBit(EXTI_Line17);
+	// 	/* Clear EXTI line17 pending bit */
+	// 	EXTI_ClearITPendingBit(EXTI_Line17);
 
-		/* Check if the Wake-Up flag is set */
-		if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
-		{
-			/* Clear Wake Up flag */
-			PWR_ClearFlag(PWR_FLAG_WU);
-		}
+	// 	/* Check if the Wake-Up flag is set */
+	// 	if(PWR_GetFlagStatus(PWR_FLAG_WU) != RESET)
+	// 	{
+	// 		 Clear Wake Up flag 
+	// 		PWR_ClearFlag(PWR_FLAG_WU);
+	// 	}
 
-		/* Wait until last write operation on RTC registers has finished */
-		RTC_WaitForLastTask();
+	// 	/* Wait until last write operation on RTC registers has finished */
+	// 	RTC_WaitForLastTask();
 
-		/* Clear RTC Alarm interrupt pending bit */
-		RTC_ClearITPendingBit(RTC_IT_ALR);
+	// 	/* Clear RTC Alarm interrupt pending bit */
+	// 	RTC_ClearITPendingBit(RTC_IT_ALR);
 
-		/* Wait until last write operation on RTC registers has finished */
-		RTC_WaitForLastTask();
-	}
+	// 	/* Wait until last write operation on RTC registers has finished */
+	// 	RTC_WaitForLastTask();
+	// }
 }
 
 /*******************************************************************************
- * Function Name  : DMA1_Channel5_IRQHandler
+ * Function Name  : DMA1_Stream4_IRQHandler
  * Description    : This function handles SPI2_TX_DMA interrupt request.
  * Input          : None
  * Output         : None
  * Return         : None
  *******************************************************************************/
-void DMA1_Channel5_IRQHandler(void)
+void DMA1_Stream4_IRQHandler(void)
 {
 	SPI_DMA_IntHandler();
 }
@@ -640,11 +667,22 @@ void DMA1_Channel5_IRQHandler(void)
 * Output         : None
 * Return         : None
 *******************************************************************************/
-void USB_LP_CAN1_RX0_IRQHandler(void)
-{
-	USB_Istr();
-}
+// void USB_LP_CAN1_RX0_IRQHandler(void)
+// {
+// 	USB_Istr();
+// }
 
+
+// void OTG_FS_WKUP_IRQHandler(void)
+// {
+//   if(USB_OTG_dev.cfg.low_power)
+//   {
+//     *(uint32_t *)(0xE000ED10) &= 0xFFFFFFF9 ;
+//     SystemInit();
+//     USB_OTG_UngateClock(&USB_OTG_dev);
+//   }
+//   EXTI_ClearITPendingBit(EXTI_Line18);
+// }
 
 /*******************************************************************************
  * Function Name  : PPP_IRQHandler

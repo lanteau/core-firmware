@@ -273,9 +273,9 @@ void WLAN_Async_Callback(long lEventType, char *data, unsigned char length)
 			SPARK_CLOUD_CONNECTED = 0;
 			SPARK_FLASH_UPDATE = 0;
 			SPARK_LED_FADE = 1;
-                        LED_SetRGBColor(RGB_COLOR_BLUE);
-                        LED_On(LED_RGB);
-                        Spark_Error_Count = 0;
+      LED_SetRGBColor(RGB_COLOR_BLUE);
+      LED_On(LED_RGB);
+      Spark_Error_Count = 0;
 			break;
 
 		case HCI_EVNT_WLAN_UNSOL_DHCP:
