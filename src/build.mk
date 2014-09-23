@@ -14,6 +14,7 @@ CSRC += $(TARGET_SRC_PATH)/usb_bsp.c
 CSRC += $(TARGET_SRC_PATH)/usbd_desc.c
 CSRC += $(TARGET_SRC_PATH)/usbd_usr.c
 CSRC += $(TARGET_SRC_PATH)/syscalls.c
+CSRC += $(TARGET_SRC_PATH)/outlet_control.c
 
 # C++ source files included in this build.
 CPPSRC += $(TARGET_SRC_PATH)/application.cpp

@@ -27,25 +27,18 @@
 #include "application.h"
 #include "hw_config.h"
 /* Function prototypes -------------------------------------------------------*/
-// int tinkerDigitalRead(String pin);
-// int tinkerDigitalWrite(String command);
-// int tinkerAnalogRead(String pin);
-// int tinkerAnalogWrite(String command);
 
 SYSTEM_MODE(AUTOMATIC);
+
+int switchOutlet(String command);
 
 /* This function is called once at start up ----------------------------------*/
 void setup()
 {
-	//Setup the Tinker application here
-
-	//Register all the Tinker functions
-	// Spark.function("digitalread", tinkerDigitalRead);
-	// Spark.function("digitalwrite", tinkerDigitalWrite);
-
-	// Spark.function("analogread", tinkerAnalogRead);
-	// Spark.function("analogwrite", tinkerAnalogWrite);
-
+  Relays_Init();
+  outlet_set_state(RELAY1, OFF);
+  // register the Spark function
+  Spark.function("switch", switchOutlet);
 }
 
 /* This function loops forever --------------------------------------------*/
@@ -53,6 +46,16 @@ void loop()
 {
 	//This will run in a loop
 
+}
+
+int switchOutlet(String command)
+{
+  if(command == "ON")
+    outlet_set_state(RELAY1, ON);
+  if(command == "OFF")
+    outlet_set_state(RELAY1, OFF);
+
+  return 0;
 }
 
 

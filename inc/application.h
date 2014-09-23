@@ -44,5 +44,6 @@
 // #include "spark_wiring_time.h"
 // #include "spark_wiring_tone.h"
 // #include "spark_wiring_eeprom.h"
+#include "outlet_control.h"
 
 #endif /* APPLICATION_H_ */
